@@ -1,5 +1,7 @@
 import pygame
 import random
+import pygame.mixer
+
 from .dino import Dino
 from .obstacle import Obstacle
 
@@ -31,6 +33,24 @@ class Game:
         self.obstacle_frequency = 1500
         self.last_obstacle_time = pygame.time.get_ticks()
 
+        self.load_sounds()
+
+        pygame.mixer.music.load("sounds/music/background_music.mp3")
+        pygame.mixer.music.set_volume(0.5)
+        pygame.mixer.music.play(-1)
+
+    def load_sounds(self):
+        try:
+            self.jump_sound = pygame.mixer.Sound("sounds/effects/deer_jump.wav")
+            self.jump_sound.set_volume(0.4)
+
+            self.crash_sound = pygame.mixer.Sound("sounds/effects/crash.wav")
+            self.crash_sound.set_volume(1.0)
+        except pygame.error as e:
+            print(f"Chyba pri načítaní zvukov: {e}")
+            self.jump_sound = None
+            self.crash_sound = None
+
     def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -40,7 +60,10 @@ class Game:
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE and not self.game_over:
-                    self.dino.jump()
+                    if not self.dino.jumping:
+                        self.dino.jump()
+                        if self.jump_sound:
+                            self.jump_sound.play()
 
                 if event.key == pygame.K_r and self.game_over:
                     self.restart_game()
@@ -89,6 +112,9 @@ class Game:
             for obstacle in self.obstacles:
                 if self.dino.rect.colliderect(obstacle.rect):
                     self.game_over = True
+                    if self.crash_sound:
+                        pygame.mixer.music.stop()
+                        self.crash_sound.play()
                     break
 
     def draw(self):
