@@ -15,12 +15,15 @@ class Game:
 
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont(None, 48)
+        self.small_font = pygame.font.SysFont(None, 28)
 
         self.dino = Dino(100, 300)
         self.obstacles = []
 
         self.game_over = False
         self.game_speed = 5
+        self.level = 1
+        self.score = 0
 
         self.background = pygame.image.load("assets/images/bg.jpg").convert()
         self.background = pygame.transform.scale(self.background, (self.WIDTH, self.HEIGHT))
@@ -102,11 +105,40 @@ class Game:
 
                 if obstacle.x < -200:
                     self.obstacles.remove(obstacle)
+                elif obstacle.x < self.dino.x and not obstacle.passed:
+                    obstacle.passed = True
+                    self.score += 10
+
+            self.level = self.score // 100 + 1
+            self.game_speed = 5 + (self.level * 0.3)
+            self.obstacle_frequency = max(800, 1500 - (self.level * 100))
 
             current_time = pygame.time.get_ticks()
             if current_time - self.last_obstacle_time > self.obstacle_frequency:
-                car_type = self.get_random_car_type()
-                self.obstacles.append(Obstacle(self.WIDTH, car_type, self.game_speed))
+                if self.level < 2:
+                    available_types = ["auto_cervene", "auto_oranzove"]
+                elif self.level < 4:
+                    available_types = ["auto_cervene", "auto_oranzove", "auto_zelene", "auto_modre"]
+                elif self.level < 6:
+                    available_types = ["auto_modre", "auto_zelene", "taxi"]
+                else:
+                    available_types = ["taxi", "auto_modre", "dodavka", "auto_zelene"]
+
+                if len(self.last_cars) >= 3:
+                    if self.last_cars[-1] == self.last_cars[-2] == self.last_cars[-3]:
+                        available_types = [car for car in available_types if car != self.last_cars[-1]]
+
+                if available_types:
+                    obstacle_type = random.choice(available_types)
+                else:
+                    obstacle_type = random.choice(self.car_types)
+
+                self.obstacles.append(Obstacle(self.WIDTH, obstacle_type, self.game_speed))
+                self.last_cars.append(obstacle_type)
+
+                if len(self.last_cars) > 5:
+                    self.last_cars.pop(0)
+
                 self.last_obstacle_time = current_time
 
             for obstacle in self.obstacles:
@@ -124,10 +156,19 @@ class Game:
         for obstacle in self.obstacles:
             obstacle.draw(self.screen)
 
+        self.draw_score_and_level()
+
         if self.game_over:
             self.draw_game_over()
 
         pygame.display.flip()
+
+    def draw_score_and_level(self):
+        score_text = self.small_font.render(f"Score: {self.score}", True, (255, 255, 255))
+        self.screen.blit(score_text, (15, 15))
+
+        level_text = self.small_font.render(f"Level: {self.level}", True, (255, 255, 255))
+        self.screen.blit(level_text, (15, 40))
 
     def draw_game_over(self):
         overlay = pygame.Surface((self.WIDTH, self.HEIGHT), pygame.SRCALPHA)
@@ -135,10 +176,14 @@ class Game:
         self.screen.blit(overlay, (0, 0))
 
         game_over_text = self.font.render("GAME OVER", True, (255, 50, 50))
+        score_text = self.small_font.render(f"Score: {self.score}", True, (255, 255, 255))
+        level_text = self.small_font.render(f"Level: {self.level}", True, (255, 255, 255))
         restart_text = pygame.font.SysFont(None, 32).render("Press R to restart", True, (200, 200, 200))
 
-        self.screen.blit(game_over_text, (self.WIDTH // 2 - game_over_text.get_width() // 2, self.HEIGHT // 2 - 30))
-        self.screen.blit(restart_text, (self.WIDTH // 2 - restart_text.get_width() // 2, self.HEIGHT // 2 + 30))
+        self.screen.blit(game_over_text, (self.WIDTH // 2 - game_over_text.get_width() // 2, self.HEIGHT // 2 - 48))
+        self.screen.blit(level_text, (self.WIDTH // 2 - level_text.get_width() // 2, self.HEIGHT // 2 - 10))
+        self.screen.blit(score_text, (self.WIDTH // 2 - score_text.get_width() // 2, self.HEIGHT // 2 + 10))
+        self.screen.blit(restart_text, (self.WIDTH // 2 - restart_text.get_width() // 2, self.HEIGHT // 2 + 45))
 
     def restart_game(self):
         self.__init__()
