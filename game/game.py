@@ -4,6 +4,7 @@ import pygame.mixer
 
 from .dino import Dino
 from .obstacle import Obstacle
+from .background import Background
 
 class Game:
     def __init__(self):
@@ -25,8 +26,7 @@ class Game:
         self.level = 1
         self.score = 0
 
-        self.background = pygame.image.load("assets/images/bg.jpg").convert()
-        self.background = pygame.transform.scale(self.background, (self.WIDTH, self.HEIGHT))
+        self.bg = Background(self.WIDTH, self.HEIGHT, self.game_speed)
 
         self.car_types = ["auto_cervene", "auto_oranzove", "auto_zelene",
                           "auto_modre", "dodavka", "taxi"]
@@ -98,6 +98,8 @@ class Game:
 
     def update(self):
         if not self.game_over:
+            self.bg.speed = self.game_speed
+            self.bg.update()
             self.dino.update()
 
             for obstacle in self.obstacles[:]:
@@ -112,6 +114,8 @@ class Game:
             self.level = self.score // 100 + 1
             self.game_speed = 5 + (self.level * 0.3)
             self.obstacle_frequency = max(800, 1500 - (self.level * 100))
+
+            self.bg.speed = self.game_speed
 
             current_time = pygame.time.get_ticks()
             if current_time - self.last_obstacle_time > self.obstacle_frequency:
@@ -150,7 +154,7 @@ class Game:
                     break
 
     def draw(self):
-        self.screen.blit(self.background, (0, 0))
+        self.bg.draw(self.screen)
         self.dino.draw(self.screen)
 
         for obstacle in self.obstacles:
