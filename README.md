@@ -40,3 +40,18 @@ Projekt využíva nasledujúce nástroje:
 - **Knižnica:** PyGame
 - **IDE:** PyCharm
 - **Verziovanie:** GitHub
+
+## Štruktúra projektu
+```text
+Dino_run/
+├── assets/
+│   └── images/       # Vozidla, pozadia a animácie postavy
+├── game/
+│   ├── background.py # Nekonečné rolovanie pozadia
+│   ├── dino.py       # Logika a animácie jelena
+│   ├── game.py       # Engine hry a správa stavov
+│   ├── init.py
+│   └── obstacle.py   # Definícia a správanie vozidiel
+├── sounds/           # Hudba na pozadí a zvukové efekty
+├── main.py           # Vstupný bod (spúšťač hry)
+└── README.md         # Dokumentácia projektu
