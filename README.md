@@ -2,6 +2,9 @@
 
 **DEERUN** je 2D arkádová hra, v ktorej sa hráč vžije do role jeleňa snažiaceho sa prežiť v rušnej premávke.
 
+## Ukážka hry
+![Ukážka hry](assets/images/ukazka.png)
+
 ## Pointa hry
 Cieľom hry je získať čo najvyššie skóre a vyhnúť sa zrážke.
 
@@ -21,8 +24,9 @@ Cieľom hry je získať čo najvyššie skóre a vyhnúť sa zrážke.
 
 ## Vlastnosti hry
 
-- **Zvuk:** Zvukové efekty pre lepší zážitok.
-- **Počítanie skóre:** Sledovanie úspešnosti hráča.
+- **Zvuk:** Zvukové efekty s možnosťou úpravy hlasitosti pre lepší zážitok.
+- **Počítanie skóre:** Sledovanie aktuálneho úspechu hráča.
+- **Top 15 Tabuľka:** Systém zaznamenávania 15 najlepších dosiahnutých výsledkov.
 - **Dynamická obtiažnosť:** Postupné zvyšovanie rýchlosti hry.
 - **OOP:** Použitie tried a objektov v kóde.
 - **Game Over stav:** Jasné ukončenie hry pri neúspechu.
