@@ -7,11 +7,9 @@ from .obstacle import Obstacle
 from .background import Background
 
 class Game:
-    def __init__(self):
-        pygame.init()
-
+    def __init__(self, screen, music_volume=0.5, sfx_volume=0.4):
+        self.screen = screen
         self.WIDTH, self.HEIGHT = 800, 400
-        self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Dino Game")
 
         self.clock = pygame.time.Clock()
@@ -36,19 +34,24 @@ class Game:
         self.obstacle_frequency = 1500
         self.last_obstacle_time = pygame.time.get_ticks()
 
+        self.music_volume = music_volume
+        self.sfx_volume = sfx_volume
+
         self.load_sounds()
 
         pygame.mixer.music.load("sounds/music/background_music.mp3")
-        pygame.mixer.music.set_volume(0.5)
+        pygame.mixer.music.set_volume(self.music_volume)
         pygame.mixer.music.play(-1)
+
+        self.return_to_menu = False
 
     def load_sounds(self):
         try:
             self.jump_sound = pygame.mixer.Sound("sounds/effects/deer_jump.wav")
-            self.jump_sound.set_volume(0.4)
+            self.jump_sound.set_volume(self.sfx_volume)
 
             self.crash_sound = pygame.mixer.Sound("sounds/effects/crash.wav")
-            self.crash_sound.set_volume(1.0)
+            self.crash_sound.set_volume(self.sfx_volume)
         except pygame.error as e:
             print(f"Chyba pri načítaní zvukov: {e}")
             self.jump_sound = None
@@ -58,7 +61,6 @@ class Game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
-                pygame.quit()
                 return
 
             if event.type == pygame.KEYDOWN:
@@ -73,8 +75,10 @@ class Game:
                     return
 
                 if event.key == pygame.K_ESCAPE:
-                    self.running = False
-                    pygame.quit()
+                    if self.game_over:
+                        self.return_to_menu = True
+                    else:
+                        self.running = False
                     return
 
     def get_random_car_type(self):
@@ -183,14 +187,27 @@ class Game:
         score_text = self.small_font.render(f"Score: {self.score}", True, (255, 255, 255))
         level_text = self.small_font.render(f"Level: {self.level}", True, (255, 255, 255))
         restart_text = pygame.font.SysFont(None, 32).render("Press R to restart", True, (200, 200, 200))
+        return_menu = pygame.font.SysFont(None, 32).render("Press Esc for menu", True, (200, 200, 200))
+
 
         self.screen.blit(game_over_text, (self.WIDTH // 2 - game_over_text.get_width() // 2, self.HEIGHT // 2 - 48))
         self.screen.blit(level_text, (self.WIDTH // 2 - level_text.get_width() // 2, self.HEIGHT // 2 - 10))
         self.screen.blit(score_text, (self.WIDTH // 2 - score_text.get_width() // 2, self.HEIGHT // 2 + 10))
         self.screen.blit(restart_text, (self.WIDTH // 2 - restart_text.get_width() // 2, self.HEIGHT // 2 + 45))
+        self.screen.blit(return_menu, (self.WIDTH // 2 - return_menu.get_width() // 2, self.HEIGHT // 2 + 75))
+
 
     def restart_game(self):
-        self.__init__()
+        self.dino = Dino(100, 300)
+        self.obstacles = []
+        self.game_over = False
+        self.game_speed = 5
+        self.level = 1
+        self.score = 0
+        self.bg = Background(self.WIDTH, self.HEIGHT, self.game_speed)
+        self.last_cars = []
+        self.last_obstacle_time = pygame.time.get_ticks()
+        pygame.mixer.music.play(-1)
 
     def run(self):
         self.running = True
@@ -198,11 +215,14 @@ class Game:
         while self.running:
             self.handle_events()
 
-            if not hasattr(self, 'running') or not self.running:
+            if self.return_to_menu:
+                return 'menu'
+
+            if not self.running:
                 break
 
             self.update()
             self.draw()
             self.clock.tick(60)
 
-        pygame.quit()
+        return 'quit'
