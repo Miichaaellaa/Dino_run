@@ -2,6 +2,15 @@
 
 **DEERUN** je 2D arkádová hra, v ktorej sa hráč vžije do role jeleňa snažiaceho sa prežiť v rušnej premávke.
 
+## Ukážka menu
+![Ukážka menu]<img width="1002" height="502" alt="image" src="https://github.com/user-attachments/assets/ced8714f-49e0-4cbf-ac3b-367b9f787110" />
+
+## Ukážka settings
+![Ukážka menu]<img width="1000" height="500" alt="image" src="https://github.com/user-attachments/assets/643b0ebd-dcd2-424e-8d5e-fd18df07d330" />
+
+## Ukážka top-skóre
+![Ukážka top skóre]<img width="997" height="493" alt="image" src="https://github.com/user-attachments/assets/f26529b5-f190-4e8c-976c-af0796bcae7d" />
+
 ## Ukážka hry
 ![Ukážka hry](assets/images/ukazka.png)
 
@@ -54,4 +63,7 @@ Dino_run/
 │   └── obstacle.py   # Definícia a správanie vozidiel
 ├── sounds/           # Hudba na pozadí a zvukové efekty
 ├── main.py           # Vstupný bod (spúšťač hry)
+├── start_menu.py     # Úvodné menu hry
+├── highscores.json   # Top skóre
+├── settings.json     # Nastavenia hlasitosti
 └── README.md         # Dokumentácia projektu
