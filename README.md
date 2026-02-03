@@ -1,69 +1,102 @@
 # DEERUN
 
-**DEERUN** je 2D arkádová hra, v ktorej sa hráč vžije do role jeleňa snažiaceho sa prežiť v rušnej premávke.
-
-## Ukážka menu
-]<img width="1002" height="502" alt="image" src="https://github.com/user-attachments/assets/ced8714f-49e0-4cbf-ac3b-367b9f787110" />
-
-## Ukážka settings
-<img width="1000" height="500" alt="image" src="https://github.com/user-attachments/assets/643b0ebd-dcd2-424e-8d5e-fd18df07d330" />
-
-## Ukážka top-skóre
-<img width="997" height="493" alt="image" src="https://github.com/user-attachments/assets/f26529b5-f190-4e8c-976c-af0796bcae7d" />
+**DEERUN** je 2D arkádová hra vytvorená v knižnici PyGame, v ktorej sa hráč vžije do role jeleňa snažiaceho sa prežiť v nebezpečnej premávke.
 
 ## Ukážka hry
+
 ![Ukážka hry](assets/images/ukazka.png)
 
 ## Pointa hry
-Cieľom hry je získať čo najvyššie skóre a vyhnúť sa zrážke.
 
-- Hráč ovláda jeleňa.
-- Hlavnou úlohou je **vyhýbať sa dopravným prostriedkom** (autá, kamióny).
-- Získať čo najvyššie skóre.
-- Hra sa postupom času **zrýchľuje**, čím sa zvyšuje obtiažnosť.
-- Hra končí stavom *Game Over*, keď dôjde ku kolízii.
+Cieľom hry je získať čo najvyššie skóre a vyhnúť sa zrážke s prichádzajúcimi vozidlami.
+
+* Hráč ovláda postavu jeleňa.
+* Hlavnou úlohou je **vyhýbať sa dopravným prostriedkom** (autá, taxi, dodávky).
+* Hra obsahuje **systém levelov**, ktoré postupne zvyšujú rýchlosť a náročnosť.
+* Získavaš body za každé úspešne preskočené vozidlo.
+* Hra končí stavom *Game Over* pri kolízii, po ktorom je možné hru reštartovať.
+
+## Funkcionality
+
+### Modelovanie dát pomocou tried (OOP)
+
+Projekt je postavený na objektovo orientovanom programovaní s rozdelením logiky do modulov:
+
+* **`Dino` (Jeleň)**: Správa fyziky, gravitácie a animácií (8-frejmový run cycle).
+* **`Obstacle`**: Inteligentný generátor prekážok s rôznymi vlastnosťami pre červené, modré, zelené autá, taxíky a dodávky.
+* **`Background`**: Realizácia nekonečného rolovania pozadia pre plynulý efekt pohybu.
+* **`Game`**: Hlavný manažér hry, ktorý riadi hernú slučku, kolízie, zvuky a náročnosť.
+
+### Herná logika a UI
+
+* **Dynamická obtiažnosť**: Automatické zvyšovanie rýchlosti (`game_speed`) a frekvencie prekážok na základe skóre.
+* **Zvukový systém**: Implementácia hudby na pozadí a zvukových efektov s možnosťou úpravy hlasitosti.
+* **Top 15 Skóre**: Systém zaznamenávania a zobrazovania najlepších dosiahnutých výsledkov.
+* **Interaktívne menu**: Prehľadná obrazovka Game Over s možnosťou reštartu klávesou `R`.
 
 ## Ovládanie
 
-| Klávesa | Akcia |
-| :--- | :--- |
-| **Medzerník (Space)** | Skok (vyhnutie sa prekážke) |
-| **R** | Reštart hry |
-| **ESC** | Ukončenie celého programu |
-
-## Vlastnosti hry
-
-- **Zvuk:** Zvukové efekty s možnosťou úpravy hlasitosti pre lepší zážitok.
-- **Počítanie skóre:** Sledovanie aktuálneho úspechu hráča.
-- **Top 15 Tabuľka:** Systém zaznamenávania 15 najlepších dosiahnutých výsledkov.
-- **Dynamická obtiažnosť:** Postupné zvyšovanie rýchlosti hry.
-- **OOP:** Použitie tried a objektov v kóde.
-- **Game Over stav:** Jasné ukončenie hry pri neúspechu.
-- **Grafika:** Použitie farieb, textu a pixel-art štýlu.
-
-## Použité technológie
-
-Projekt využíva nasledujúce nástroje:
-
-- **Jazyk:** Python 3
-- **Knižnica:** PyGame
-- **IDE:** PyCharm
-- **Verziovanie:** GitHub
+| Klávesa               | Akcia                              |
+| :-------------------- | :--------------------------------- |
+| **Medzerník (Space)** | Skok (vyhnutie sa prekážke)        |
+| **R**                 | Reštart hry po kolízii             |
+| **ESC**               | Okamžité ukončenie celého programu |
+| **Šípky / +/-**       | Úprava hlasitosti hudby a zvukov   |
 
 ## Štruktúra projektu
+
 ```text
 Dino_run/
 ├── assets/
-│   └── images/       # Vozidla, pozadia a animácie postavy
+│   └── images/       # Textúry vozidiel, pozadia a animácie postavy
 ├── game/
-│   ├── background.py # Nekonečné rolovanie pozadia
-│   ├── dino.py       # Logika a animácie jelena
+│   ├── background.py # Nekonečné rolovanie cesty/pozadia
+│   ├── dino.py       # Logika a animácie hlavnej postavy
 │   ├── game.py       # Engine hry a správa stavov
-│   ├── init.py
+│   ├── init.py       # Inicializácia balíka
 │   └── obstacle.py   # Definícia a správanie vozidiel
-├── sounds/           # Hudba na pozadí a zvukové efekty
+├── sounds/           # Hudba na pozadí a zvukové efekty (crash, jump)
 ├── main.py           # Vstupný bod (spúšťač hry)
-├── start_menu.py     # Úvodné menu hry
-├── highscores.json   # Top skóre
-├── settings.json     # Nastavenia hlasitosti
 └── README.md         # Dokumentácia projektu
+```
+
+---
+
+## Použité zdroje (Assets & Credits)
+
+### Grafické podklady – BackGround
+* Pinterest – **background**
+https://sk.pinterest.com/pin/108930884731084699/
+
+### Grafické podklady – Pixel Art Vozidlá
+
+* Pinterest – **Orange car**
+  [https://sk.pinterest.com/pin/237776055322046224/](https://sk.pinterest.com/pin/237776055322046224/)
+
+* Pinterest – **Red car**
+  [https://sk.pinterest.com/pin/567594359321722798/](https://sk.pinterest.com/pin/567594359321722798/)
+
+* Pinterest – **Yellow Taxi**
+  [https://sk.pinterest.com/pin/439523244906444352/](https://sk.pinterest.com/pin/439523244906444352/)
+
+* Pinterest – **Green car**
+  [https://sk.pinterest.com/pin/69172544272333071/](https://sk.pinterest.com/pin/69172544272333071/)
+
+* Pinterest – **Truck**
+  [https://sk.pinterest.com/pin/412360909650699110/](https://sk.pinterest.com/pin/412360909650699110/)
+
+* Pinterest – **Blue car**
+  [https://sk.pinterest.com/pin/83246293107216356/](https://sk.pinterest.com/pin/83246293107216356/)
+
+### Hudba na pozadí
+
+* **Pixel Drift** – Uppbeat
+  [https://uppbeat.io/track/pecan-pie/pixel-drift](https://uppbeat.io/track/pecan-pie/pixel-drift)
+
+### Zvukové efekty
+
+* **Deer Jump Effect** – Freesound (Bastianhallo)
+  [https://freesound.org/people/Bastianhallo/sounds/462958/](https://freesound.org/people/Bastianhallo/sounds/462958/)
+
+* **Collision / Crash Effect** – Freesound (squareal)
+  [https://freesound.org/people/squareal/sounds/237375/](https://freesound.org/people/squareal/sounds/237375/)
