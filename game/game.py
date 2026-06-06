@@ -6,8 +6,9 @@ from .dino import Dino
 from .obstacle import Obstacle
 from .background import Background
 
+
 class Game:
-    def __init__(self, screen, music_volume=0.5, sfx_volume=0.4):
+    def __init__(self, screen, music_volume=0.5, sfx_volume=0.4, character="deer", fast_animation=True):
         self.screen = screen
         self.WIDTH, self.HEIGHT = 800, 400
         pygame.display.set_caption("Dino Game")
@@ -16,7 +17,10 @@ class Game:
         self.font = pygame.font.SysFont(None, 48)
         self.small_font = pygame.font.SysFont(None, 28)
 
-        self.dino = Dino(100, 300)
+        self.dino = Dino(100, 300, character=character, fast_animation=fast_animation)
+        self.character = character
+        self.fast_animation = fast_animation
+
         self.obstacles = []
 
         self.game_over = False
@@ -39,9 +43,12 @@ class Game:
 
         self.load_sounds()
 
-        pygame.mixer.music.load("sounds/music/background_music.mp3")
-        pygame.mixer.music.set_volume(self.music_volume)
-        pygame.mixer.music.play(-1)
+        try:
+            pygame.mixer.music.load("sounds/music/background_music.mp3")
+            pygame.mixer.music.set_volume(self.music_volume)
+            pygame.mixer.music.play(-1)
+        except:
+            print("[GAME] Nepodarilo sa načítať hudbu na pozadí")
 
         self.return_to_menu = False
 
@@ -115,9 +122,13 @@ class Game:
                     obstacle.passed = True
                     self.score += 10
 
+            old_level = self.level
             self.level = self.score // 100 + 1
             self.game_speed = 5 + (self.level * 0.3)
             self.obstacle_frequency = max(800, 1500 - (self.level * 100))
+
+            if self.fast_animation and old_level != self.level:
+                self.dino.animation_speed = min(0.5, 0.2 + (self.level * 0.02))
 
             self.bg.speed = self.game_speed
 
@@ -153,7 +164,10 @@ class Game:
                 if self.dino.rect.colliderect(obstacle.rect):
                     self.game_over = True
                     if self.crash_sound:
-                        pygame.mixer.music.stop()
+                        try:
+                            pygame.mixer.music.stop()
+                        except:
+                            pass
                         self.crash_sound.play()
                     break
 
@@ -189,16 +203,14 @@ class Game:
         restart_text = pygame.font.SysFont(None, 32).render("Press R to restart", True, (200, 200, 200))
         return_menu = pygame.font.SysFont(None, 32).render("Press Esc for menu", True, (200, 200, 200))
 
-
         self.screen.blit(game_over_text, (self.WIDTH // 2 - game_over_text.get_width() // 2, self.HEIGHT // 2 - 48))
         self.screen.blit(level_text, (self.WIDTH // 2 - level_text.get_width() // 2, self.HEIGHT // 2 - 10))
         self.screen.blit(score_text, (self.WIDTH // 2 - score_text.get_width() // 2, self.HEIGHT // 2 + 10))
         self.screen.blit(restart_text, (self.WIDTH // 2 - restart_text.get_width() // 2, self.HEIGHT // 2 + 45))
         self.screen.blit(return_menu, (self.WIDTH // 2 - return_menu.get_width() // 2, self.HEIGHT // 2 + 75))
 
-
     def restart_game(self):
-        self.dino = Dino(100, 300)
+        self.dino = Dino(100, 300, character=self.character, fast_animation=self.fast_animation)
         self.obstacles = []
         self.game_over = False
         self.game_speed = 5
@@ -207,7 +219,11 @@ class Game:
         self.bg = Background(self.WIDTH, self.HEIGHT, self.game_speed)
         self.last_cars = []
         self.last_obstacle_time = pygame.time.get_ticks()
-        pygame.mixer.music.play(-1)
+
+        try:
+            pygame.mixer.music.play(-1)
+        except:
+            pass
 
     def run(self):
         self.running = True
@@ -216,7 +232,11 @@ class Game:
             self.handle_events()
 
             if self.return_to_menu:
-                return 'menu'
+                try:
+                    pygame.mixer.music.stop()
+                except:
+                    pass
+                return self.score
 
             if not self.running:
                 break
@@ -225,4 +245,4 @@ class Game:
             self.draw()
             self.clock.tick(60)
 
-        return 'quit'
+        return 0

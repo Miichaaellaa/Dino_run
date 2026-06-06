@@ -1,1 +1,24 @@
-{"scores": [410, 140, 80, 60, 30, 20, 10, 10, 0, 0, 0, 0]}
+{
+  "scores": [
+    {
+      "name": "Hrac",
+      "score": 740
+    },
+    {
+      "name": "Singular",
+      "score": 470
+    },
+    {
+      "name": "Skrecok",
+      "score": 30
+    },
+    {
+      "name": "Hrac67",
+      "score": 10
+    },
+    {
+      "name": "Tralala",
+      "score": 10
+    }
+  ]
+}
