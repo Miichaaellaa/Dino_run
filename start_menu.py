@@ -3,9 +3,7 @@ import json
 import os
 
 from game.game import Game
-from game.multiplayer_game import MultiplayerGame
 from game.background import Background
-from game.paths import project_path
 
 
 class Button:
@@ -30,7 +28,6 @@ class Button:
 
 class Menu:
     def __init__(self):
-        pygame.mixer.pre_init(44100, -16, 2, 512)
         pygame.init()
         self.WIDTH, self.HEIGHT = 800, 400
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
@@ -41,16 +38,15 @@ class Menu:
         self.small_font = pygame.font.SysFont(None, 28)
         self.bg = Background(self.WIDTH, self.HEIGHT, 5)
 
-        self.settings_file = project_path("settings.json")
+        self.settings_file = "settings.json"
         self.load_settings()
-        self.highscores = self.load_highscores()
 
         try:
-            pygame.mixer.music.load(project_path("sounds", "music", "background_music.mp3"))
+            pygame.mixer.music.load("sounds/music/background_music.mp3")
             pygame.mixer.music.set_volume(self.music_volume)
             pygame.mixer.music.play(-1)
-        except pygame.error as e:
-            print(f"[MENU] Nepodarilo sa nacitat hudbu na pozadi: {e}")
+        except:
+            print("[MENU] Nepodarilo sa načítať hudbu na pozadí.")
 
         self.menu_state = 'main'
         self.buttons = []
@@ -63,27 +59,22 @@ class Menu:
 
         self.error_message = ""
         self.error_time = 0
-        self.dragging_slider = None
-        self.last_sfx_preview_time = 0
-        self.preview_sound = None
-        self.load_preview_sound()
 
     def load_settings(self):
         if os.path.exists(self.settings_file):
             try:
-                with open(self.settings_file, "r", encoding="utf-8") as f:
+                with open(self.settings_file, "r") as f:
                     data = json.load(f)
                     self.music_volume = data.get("music_volume", 0.5)
                     self.sfx_volume = data.get("sfx_volume", 0.4)
-            except (OSError, json.JSONDecodeError) as e:
-                print(f"[MENU] Nepodarilo sa nacitat nastavenia: {e}")
+            except:
                 self.music_volume, self.sfx_volume = 0.5, 0.4
         else:
             self.music_volume, self.sfx_volume = 0.5, 0.4
 
     def save_settings(self):
         try:
-            with open(self.settings_file, "w", encoding="utf-8") as f:
+            with open(self.settings_file, "w") as f:
                 json.dump({"music_volume": self.music_volume, "sfx_volume": self.sfx_volume}, f)
         except Exception as e:
             print(f"[MENU] Chyba pri ukladaní nastavení: {e}")
@@ -92,59 +83,18 @@ class Menu:
         self.error_message = text
         self.error_time = pygame.time.get_ticks()
 
-    def load_preview_sound(self):
-        try:
-            self.preview_sound = pygame.mixer.Sound(project_path("sounds", "effects", "deer_jump.wav"))
-            self.preview_sound.set_volume(self.sfx_volume)
-        except pygame.error as e:
-            print(f"[MENU] Nepodarilo sa nacitat SFX preview: {e}")
-            self.preview_sound = None
-
-    def load_highscores(self):
-        try:
-            with open(project_path("highscores.json"), "r", encoding="utf-8") as f:
-                data = json.load(f)
-        except (OSError, json.JSONDecodeError) as e:
-            print(f"[MENU] Nepodarilo sa nacitat top score: {e}")
-            return []
-
-        scores = data.get("scores", [])
-        return sorted([score for score in scores if isinstance(score, int)], reverse=True)[:10]
-
     def start_singleplayer(self):
         try:
             pygame.mixer.music.stop()
-        except pygame.error:
+        except:
             pass
 
         game = Game(self.screen, music_volume=self.music_volume, sfx_volume=self.sfx_volume)
         game.run()
-        self.highscores = self.load_highscores()
 
         try:
             pygame.mixer.music.play(-1)
-        except pygame.error:
-            pass
-        self.menu_state = 'main'
-
-    def start_local_multiplayer(self, player_count=None):
-        try:
-            pygame.mixer.music.stop()
-        except pygame.error:
-            pass
-
-        selected_players = player_count or self.max_players_choice
-        game = MultiplayerGame(
-            self.screen,
-            player_count=selected_players,
-            music_volume=self.music_volume,
-            sfx_volume=self.sfx_volume
-        )
-        game.run()
-
-        try:
-            pygame.mixer.music.play(-1)
-        except pygame.error:
+        except:
             pass
         self.menu_state = 'main'
 
@@ -158,43 +108,9 @@ class Menu:
         title = self.font.render("DEERUN", True, (255, 255, 255))
         self.screen.blit(title, (self.WIDTH // 2 - title.get_width() // 2, 50))
         self.buttons = [
-            Button(300, 120, 200, 45, "Štart", lambda: setattr(self, 'menu_state', 'start_choice'), self.small_font),
-            Button(300, 175, 200, 45, "High scores", lambda: setattr(self, 'menu_state', 'highscores'), self.small_font),
-            Button(300, 230, 200, 45, "Nastavenia", lambda: setattr(self, 'menu_state', 'settings'), self.small_font),
-            Button(300, 285, 200, 45, "Ukončiť", lambda: setattr(self, 'running', False), self.small_font)
-        ]
-    def draw_top_scores(self):
-        x = self.WIDTH - 175
-        y = 130
-
-        title = self.small_font.render("TOP SCORE", True, (255, 255, 0))
-        self.screen.blit(title, (x, y))
-
-        if not self.highscores:
-            empty_text = self.small_font.render("Zatial ziadne", True, (255, 255, 255))
-            self.screen.blit(empty_text, (x, y + 30))
-            return
-
-        for index, score in enumerate(self.highscores, start=1):
-            score_text = self.small_font.render(f"{index}. {score}", True, (255, 255, 255))
-            self.screen.blit(score_text, (x, y + index * 28))
-
-    def draw_highscores(self):
-        self.highscores = self.load_highscores()
-
-        title = self.font.render("HIGH SCORES", True, (255, 255, 255))
-        self.screen.blit(title, (self.WIDTH // 2 - title.get_width() // 2, 45))
-
-        if not self.highscores:
-            empty_text = self.small_font.render("Zatiaľ žiadne skóre", True, (255, 255, 255))
-            self.screen.blit(empty_text, (self.WIDTH // 2 - empty_text.get_width() // 2, 150))
-        else:
-            for index, score in enumerate(self.highscores, start=1):
-                score_text = self.small_font.render(f"{index}. {score}", True, (255, 255, 255))
-                self.screen.blit(score_text, (self.WIDTH // 2 - score_text.get_width() // 2, 95 + index * 26))
-
-        self.buttons = [
-            Button(300, 310, 200, 45, "Späť", lambda: setattr(self, 'menu_state', 'main'), self.small_font)
+            Button(300, 140, 200, 45, "Štart", lambda: setattr(self, 'menu_state', 'start_choice'), self.small_font),
+            Button(300, 200, 200, 45, "Nastavenia", lambda: setattr(self, 'menu_state', 'settings'), self.small_font),
+            Button(300, 260, 200, 45, "Ukončiť", lambda: setattr(self, 'running', False), self.small_font)
         ]
 
     def draw_start_choice(self):
@@ -211,15 +127,15 @@ class Menu:
         title = self.font.render("Multiplayer", True, (255, 255, 255))
         self.screen.blit(title, (self.WIDTH // 2 - title.get_width() // 2, 50))
         self.buttons = [
-            Button(275, 140, 250, 45, "Hrat multiplayer", lambda: setattr(self, 'menu_state', 'create_server'),
-                   self.small_font, (0, 110, 80)),
-            Button(275, 205, 250, 45, "Pripojiť sa", lambda: setattr(self, 'menu_state', 'join_server'),
+            Button(300, 140, 200, 45, "Pripojiť sa", lambda: setattr(self, 'menu_state', 'join_server'),
+                   self.small_font),
+            Button(300, 200, 200, 45, "Vytvoriť server", lambda: setattr(self, 'menu_state', 'create_server'),
                    self.small_font),
             Button(300, 280, 200, 45, "Späť", lambda: setattr(self, 'menu_state', 'start_choice'), self.small_font)
         ]
 
     def draw_create_server(self):
-        title = self.font.render("Lokalny multiplayer", True, (255, 255, 255))
+        title = self.font.render("Vytvoriť server", True, (255, 255, 255))
         self.screen.blit(title, (self.WIDTH // 2 - title.get_width() // 2, 30))
         self.screen.blit(self.small_font.render("Počet hráčov (max 4):", True, (255, 255, 255)), (180, 110))
         for i, num in enumerate([2, 3, 4]):
@@ -228,8 +144,12 @@ class Menu:
                 Button(420 + (i * 60), 100, 50, 35, str(num), lambda n=num: setattr(self, 'max_players_choice', n),
                        self.small_font, btn_color))
 
+        self.screen.blit(self.small_font.render(f"Meno hráča: {self.player_name}", True, (255, 255, 255)), (180, 160))
+        self.buttons.append(
+            Button(550, 152, 100, 32, "Zmeniť", lambda: setattr(self, 'active_input', 'name_create'), self.small_font))
+
         self.buttons.extend([
-            Button(200, 280, 180, 45, "Start hry", self.start_local_multiplayer, self.small_font, (0, 100, 0)),
+            Button(200, 280, 180, 45, "Vytvoriť server", self.demo_create_server, self.small_font, (0, 100, 0)),
             Button(420, 280, 180, 45, "Späť", lambda: setattr(self, 'menu_state', 'multiplayer_choice'),
                    self.small_font)
         ])
@@ -256,67 +176,32 @@ class Menu:
         title = self.font.render("Nastavenia", True, (255, 255, 255))
         self.screen.blit(title, (self.WIDTH // 2 - title.get_width() // 2, 50))
 
-        self.draw_volume_slider("music", "Hudba", self.music_volume, 150)
-        self.draw_volume_slider("sfx", "Efekty", self.sfx_volume, 215)
+        self.screen.blit(
+            self.small_font.render(f"Hlasitosť Hudby: {int(self.music_volume * 100)}%", True, (255, 255, 255)),
+            (200, 140))
+        self.screen.blit(
+            self.small_font.render(f"Hlasitosť Efektov: {int(self.sfx_volume * 100)}%", True, (255, 255, 255)),
+            (200, 200))
+
+        def modify_vol(target, change):
+            if target == 'm':
+                self.music_volume = max(0.0, min(1.0, self.music_volume + change))
+                try:
+                    pygame.mixer.music.set_volume(self.music_volume)
+                except:
+                    pass
+            else:
+                self.sfx_volume = max(0.0, min(1.0, self.sfx_volume + change))
+            self.save_settings()
 
         self.buttons = [
-            Button(300, 300, 200, 45, "Späť", lambda: setattr(self, 'menu_state', 'main'), self.small_font)
+            Button(480, 132, 40, 32, "-", lambda: modify_vol('m', -0.1), self.small_font),
+            Button(530, 132, 40, 32, "+", lambda: modify_vol('m', 0.1), self.small_font),
+            Button(480, 192, 40, 32, "-", lambda: modify_vol('s', -0.1), self.small_font),
+            Button(530, 192, 40, 32, "+", lambda: modify_vol('s', 0.1), self.small_font),
+            Button(300, 280, 200, 45, "Späť", lambda: setattr(self, 'menu_state', 'main'), self.small_font)
         ]
 
-    def draw_volume_slider(self, target, label, value, y):
-        label_text = self.small_font.render(f"{label}: {int(value * 100)}%", True, (255, 255, 255))
-        self.screen.blit(label_text, (170, y - 12))
-
-        track_rect = pygame.Rect(330, y, 270, 8)
-        pygame.draw.rect(self.screen, (70, 70, 70), track_rect)
-
-        fill_rect = pygame.Rect(track_rect.x, track_rect.y, int(track_rect.width * value), track_rect.height)
-        pygame.draw.rect(self.screen, (80, 180, 120), fill_rect)
-
-        knob_x = track_rect.x + int(track_rect.width * value)
-        pygame.draw.circle(self.screen, (245, 245, 245), (knob_x, track_rect.centery), 12)
-        pygame.draw.circle(self.screen, (40, 40, 40), (knob_x, track_rect.centery), 12, 2)
-
-    def slider_value_from_pos(self, pos):
-        track_x = 330
-        track_width = 270
-        return max(0.0, min(1.0, (pos[0] - track_x) / track_width))
-
-    def handle_settings_slider(self, pos, preview_sfx=False):
-        slider_zones = {
-            "music": pygame.Rect(318, 134, 294, 40),
-            "sfx": pygame.Rect(318, 199, 294, 40)
-        }
-
-        target = self.dragging_slider
-        if target is None:
-            for slider_name, zone in slider_zones.items():
-                if zone.collidepoint(pos):
-                    target = slider_name
-                    self.dragging_slider = slider_name
-                    break
-
-        if target is None:
-            return False
-
-        value = self.slider_value_from_pos(pos)
-        if target == "music":
-            self.music_volume = value
-            try:
-                pygame.mixer.music.set_volume(self.music_volume)
-            except pygame.error:
-                pass
-        else:
-            self.sfx_volume = value
-            if self.preview_sound:
-                self.preview_sound.set_volume(self.sfx_volume)
-                current_time = pygame.time.get_ticks()
-                if preview_sfx and current_time - self.last_sfx_preview_time > 150:
-                    self.preview_sound.play()
-                    self.last_sfx_preview_time = current_time
-
-        self.save_settings()
-        return True
     def draw_input_overlay(self):
         overlay = pygame.Surface((self.WIDTH, self.HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 220))
@@ -354,7 +239,7 @@ class Menu:
                                 self.running = False
                             elif self.menu_state == 'start_choice':
                                 self.menu_state = 'main'
-                            elif self.menu_state in ['multiplayer_choice', 'settings', 'highscores']:
+                            elif self.menu_state in ['multiplayer_choice', 'settings']:
                                 self.menu_state = 'main'
                             elif self.menu_state in ['create_server', 'join_server']:
                                 self.menu_state = 'multiplayer_choice'
@@ -374,16 +259,7 @@ class Menu:
                                 elif 'ip' in self.active_input and len(self.ip_input_text) < 20:
                                     self.ip_input_text += event.unicode
 
-                if event.type == pygame.MOUSEBUTTONUP:
-                    self.dragging_slider = None
-
-                if event.type == pygame.MOUSEMOTION and self.menu_state == 'settings' and self.dragging_slider:
-                    self.handle_settings_slider(event.pos, preview_sfx=True)
-
                 if event.type == pygame.MOUSEBUTTONDOWN and not self.active_input:
-                    if self.menu_state == 'settings' and self.handle_settings_slider(event.pos, preview_sfx=True):
-                        continue
-
                     for button in self.buttons:
                         button.handle_click(event.pos)
 
@@ -404,8 +280,6 @@ class Menu:
                 self.draw_join_server()
             elif self.menu_state == 'settings':
                 self.draw_settings()
-            elif self.menu_state == 'highscores':
-                self.draw_highscores()
 
             if not self.active_input:
                 for button in self.buttons:
@@ -422,4 +296,3 @@ class Menu:
             self.clock.tick(60)
 
         pygame.quit()
-
