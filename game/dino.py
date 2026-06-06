@@ -1,5 +1,7 @@
 import pygame
 
+from .paths import project_path
+
 class Dino:
     def __init__(self, x, y):
         self.x = x
@@ -15,7 +17,7 @@ class Dino:
         self.run_frames = []
         self.load_run_frames()
 
-        self.jump_image = pygame.image.load("assets/images/jump.png").convert_alpha()
+        self.jump_image = pygame.image.load(project_path("assets", "images", "jump.png")).convert_alpha()
         self.jump_image = pygame.transform.scale(self.jump_image, (self.width, self.height))
 
         self.current_frame = 0
@@ -28,7 +30,7 @@ class Dino:
 
     def load_run_frames(self):
         for i in range(8):
-            img = pygame.image.load(f"assets/images/dino_run/frame{i}.png").convert_alpha()
+            img = pygame.image.load(project_path("assets", "images", "dino_run", f"frame{i}.png")).convert_alpha()
             img = pygame.transform.scale(img, (self.width, self.height))
             self.run_frames.append(img)
 

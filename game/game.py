@@ -1,10 +1,12 @@
 import pygame
 import random
 import pygame.mixer
+import json
 
 from .dino import Dino
 from .obstacle import Obstacle
 from .background import Background
+from .paths import project_path
 
 class Game:
     def __init__(self, screen, music_volume=0.5, sfx_volume=0.4):
@@ -20,9 +22,11 @@ class Game:
         self.obstacles = []
 
         self.game_over = False
+        self.score_saved = False
         self.game_speed = 5
         self.level = 1
         self.score = 0
+        self.highscores = self.load_highscores()
 
         self.bg = Background(self.WIDTH, self.HEIGHT, self.game_speed)
 
@@ -39,23 +43,47 @@ class Game:
 
         self.load_sounds()
 
-        pygame.mixer.music.load("sounds/music/background_music.mp3")
-        pygame.mixer.music.set_volume(self.music_volume)
-        pygame.mixer.music.play(-1)
+        try:
+            pygame.mixer.music.load(project_path("sounds", "music", "background_music.mp3"))
+            pygame.mixer.music.set_volume(self.music_volume)
+            pygame.mixer.music.play(-1)
+        except pygame.error as e:
+            print(f"Chyba pri nacitani hudby: {e}")
 
         self.return_to_menu = False
 
     def load_sounds(self):
         try:
-            self.jump_sound = pygame.mixer.Sound("sounds/effects/deer_jump.wav")
+            self.jump_sound = pygame.mixer.Sound(project_path("sounds", "effects", "deer_jump.wav"))
             self.jump_sound.set_volume(self.sfx_volume)
 
-            self.crash_sound = pygame.mixer.Sound("sounds/effects/crash.wav")
+            self.crash_sound = pygame.mixer.Sound(project_path("sounds", "effects", "crash.wav"))
             self.crash_sound.set_volume(self.sfx_volume)
         except pygame.error as e:
-            print(f"Chyba pri načítaní zvukov: {e}")
+            print(f"Chyba pri nacitani zvukov: {e}")
             self.jump_sound = None
             self.crash_sound = None
+
+    def load_highscores(self):
+        try:
+            with open(project_path("highscores.json"), "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except (OSError, json.JSONDecodeError) as e:
+            print(f"Chyba pri nacitani highscore suboru: {e}")
+            return []
+
+        scores = data.get("scores", [])
+        return sorted([score for score in scores if isinstance(score, int)], reverse=True)[:15]
+
+    def save_highscore(self):
+        self.highscores.append(self.score)
+        self.highscores = sorted(self.highscores, reverse=True)[:15]
+
+        try:
+            with open(project_path("highscores.json"), "w", encoding="utf-8") as f:
+                json.dump({"scores": self.highscores}, f, indent=2)
+        except OSError as e:
+            print(f"Chyba pri ukladani highscore suboru: {e}")
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -152,6 +180,9 @@ class Game:
             for obstacle in self.obstacles:
                 if self.dino.rect.colliderect(obstacle.rect):
                     self.game_over = True
+                    if not self.score_saved:
+                        self.save_highscore()
+                        self.score_saved = True
                     if self.crash_sound:
                         pygame.mixer.music.stop()
                         self.crash_sound.play()
@@ -196,18 +227,21 @@ class Game:
         self.screen.blit(restart_text, (self.WIDTH // 2 - restart_text.get_width() // 2, self.HEIGHT // 2 + 45))
         self.screen.blit(return_menu, (self.WIDTH // 2 - return_menu.get_width() // 2, self.HEIGHT // 2 + 75))
 
-
     def restart_game(self):
         self.dino = Dino(100, 300)
         self.obstacles = []
         self.game_over = False
+        self.score_saved = False
         self.game_speed = 5
         self.level = 1
         self.score = 0
         self.bg = Background(self.WIDTH, self.HEIGHT, self.game_speed)
         self.last_cars = []
         self.last_obstacle_time = pygame.time.get_ticks()
-        pygame.mixer.music.play(-1)
+        try:
+            pygame.mixer.music.play(-1)
+        except pygame.error:
+            pass
 
     def run(self):
         self.running = True
@@ -226,3 +260,4 @@ class Game:
             self.clock.tick(60)
 
         return 'quit'
+

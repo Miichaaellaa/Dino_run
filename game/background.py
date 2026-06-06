@@ -1,5 +1,7 @@
 import pygame
 
+from .paths import project_path
+
 class Background:
     def __init__(self, width, height, speed):
         self.width = width
@@ -7,7 +9,7 @@ class Background:
 
         self.speed = speed
 
-        self.image = pygame.image.load("assets/images/background.png").convert()
+        self.image = pygame.image.load(project_path("assets", "images", "background.png")).convert()
         self.image = pygame.transform.scale(self.image, (self.width, self.height))
 
         self.x1 = 0.0
