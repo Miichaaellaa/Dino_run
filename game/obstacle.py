@@ -1,5 +1,7 @@
 import pygame
 
+from .paths import project_path
+
 class Obstacle:
     def __init__(self, x, obstacle_type, speed):
         self.x = x
@@ -30,7 +32,7 @@ class Obstacle:
         self.image_name = prop["image"]
 
     def load_image(self):
-        self.image = pygame.image.load(f"assets/images/{self.image_name}").convert_alpha()
+        self.image = pygame.image.load(project_path("assets", "images", self.image_name)).convert_alpha()
         self.image = pygame.transform.scale(self.image, (self.width, self.height))
 
     def update(self):
