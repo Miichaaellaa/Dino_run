@@ -1,6 +1,8 @@
 import pygame
 import json
 import os
+import subprocess
+import sys
 
 from game.game import Game
 from game.background import Background
@@ -98,11 +100,36 @@ class Menu:
             pass
         self.menu_state = 'main'
 
+    def start_multiplayer(self, ip):
+        try:
+            pygame.mixer.music.stop()
+        except:
+            pass
+
+        game = Game(self.screen, music_volume=self.music_volume, sfx_volume=self.sfx_volume)
+        if hasattr(game, "run_multiplayer"):
+            game.run_multiplayer(ip, self.player_name)
+        else:
+            game.run()
+
+        try:
+            pygame.mixer.music.play(-1)
+        except:
+            pass
+        self.menu_state = 'main'
+
     def demo_create_server(self):
-        self.show_error("Funkcia vytvorenia servera bude dostupná neskôr")
+        try:
+            subprocess.Popen([sys.executable, "server.py", str(self.max_players_choice)])
+            self.start_multiplayer("127.0.0.1")
+        except Exception as e:
+            self.show_error("Nepodarilo sa spustiť server")
 
     def demo_connect_to_game(self):
-        self.show_error("Funkcia pripojenia k serveru bude dostupná neskôr")
+        if not self.ip_input_text:
+            self.show_error("Zadaj IP adresu")
+            return
+        self.start_multiplayer(self.ip_input_text)
 
     def draw_main_menu(self):
         title = self.font.render("DEERUN", True, (255, 255, 255))
