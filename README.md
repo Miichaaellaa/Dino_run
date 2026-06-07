@@ -1,10 +1,14 @@
 # DEERUN
 
-**DEERUN** je 2D arkádová hra vytvorená v knižnici PyGame. Hráč ovláda jeleňa, preskakuje prichádzajúce vozidlá a snaží sa nahrať čo najvyššie skóre.
+**DEERUN** je 2D arkádová hra vytvorená v knižnici PyGame. Hráč ovláda jeleňa, preskakuje prichádzajúce vozidlá a snaží sa dosiahnuť čo najvyššie skóre.
 
-## Ukážka hry
+## Ukážka hry (Singleplayer)
 
 ![Ukážka hry](assets/images/ukazka.png)
+
+## Ukážka hry (Multiplayer)
+
+![Ukážka hry](assets/images/ukazka2.png)
 
 ## Pointa hry
 
@@ -14,47 +18,51 @@ Cieľom hry je prežiť čo najdlhšie v premávke a získať čo najvyššie sk
 * Hlavnou úlohou je vyhýbať sa dopravným prostriedkom.
 * Hra obsahuje levely, ktoré postupne zvyšujú rýchlosť a náročnosť.
 * Body sa získavajú za úspešne preskočené vozidlá.
-* Po kolízii sa zobrazí Game Over obrazovka s aktuálnym skóre.
-* Najlepšie výsledky sa zobrazujú v hlavnom menu.
+* Po kolízii sa zobrazí obrazovka Game Over s aktuálnym skóre.
+* Najlepšie výsledky sa ukladajú a zobrazujú v hlavnom menu.
 
 ## Funkcionality
 
 ### Hotové
 
 * **Singleplayer režim** so základnou hernou slučkou.
+* **Multiplayer režim (LAN)** s podporou hostiteľa a klientov.
 * **OOP štruktúra** rozdelená do samostatných tried `Dino`, `Obstacle`, `Background` a `Game`.
 * **Animovaná postava** s behom a skokom.
 * **Rôzne typy vozidiel** s rozdielnymi rozmermi a rýchlosťami.
 * **Nekonečne rolujúce pozadie**.
-* **Dynamická obtiažnosť** podľa skóre a levelu.
-* **Zvukový systém** s hudbou na pozadí a efektmi pre skok a kolíziu.
-* **Nastavenia hlasitosti** ukladané do `settings.json`.
-* **Highscore systém** ukladaný do `highscores.json` a zobrazovaný v hlavnom menu.
-* **Menu** so singleplayerom, nastaveniami a pripravenou multiplayer sekciou.
+* **Dynamická obtiažnosť** podľa skóre a aktuálneho levelu.
+* **Zvukový systém** s hudbou na pozadí a zvukovými efektmi.
+* **Nastavenia hlasitosti** ukladané do súboru `settings.json`.
+* **Systém najlepších skóre (Highscore)** ukladaný do súboru `highscores.json`.
+* **Hlavné menu** so singleplayerom, multiplayerom, nastaveniami a zobrazením rekordov.
 
-### Plánované
+### Multiplayer
 
-* **Multiplayer v lokálnej sieti**. Menu už obsahuje obrazovky pre vytvorenie servera a pripojenie, ale samotná sieťová hra zatiaľ nie je implementovaná.
+* Hráči sa môžu pripojiť k serveru pomocou IP adresy hostiteľa.
+* Každý hráč ovláda vlastného jeleňa.
+* Po kolízii môže hostiteľ iniciovať reštart hry pre všetkých hráčov.
+* Komunikácia medzi klientmi a serverom je realizovaná pomocou socketov.
 
 ## Ovládanie
 
-| Klávesa | Akcia |
-| :-- | :-- |
-| **Medzerník (Space)** | Skok |
-| **R** | Reštart hry po kolízii |
-| **ESC v hre** | Ukončí aktuálnu hru alebo návrat do menu po Game Over |
-| **ESC v menu** | Návrat o úroveň späť alebo ukončenie z hlavného menu |
-| **+ / - v nastaveniach** | Úprava hlasitosti hudby a efektov |
+| Klávesa                  | Akcia                                          |
+| ------------------------ | ---------------------------------------------- |
+| **Medzerník (Space)**    | Skok                                           |
+| **R**                    | Reštart hry                                    |
+| **ESC v hre**            | Ukončenie hry alebo návrat do menu             |
+| **ESC v menu**           | Návrat o úroveň späť alebo ukončenie aplikácie |
+| **+ / - v nastaveniach** | Úprava hlasitosti hudby a efektov              |
 
 ## Spustenie
 
-1. Nainštaluj závislosti:
+### 1. Inštalácia závislostí
 
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Spusti hru:
+### 2. Spustenie hry
 
 ```bash
 python main.py
@@ -62,22 +70,32 @@ python main.py
 
 ## Štruktúra projektu
 
-```text
+```plaintext
 Dino_run/
+├── .venv/                    # Virtuálne Python prostredie
 ├── assets/
-│   └── images/          # Textúry vozidiel, pozadia a animácie postavy
+│   ├── characters/           # Sprity a animácie jeleňa
+│   └── images/               # Vozidlá a pozadie
 ├── game/
-│   ├── background.py    # Nekonečné rolovanie pozadia
-│   ├── dino.py          # Logika a animácie hlavnej postavy
-│   ├── game.py          # Herná slučka, kolízie, skóre a zvuky
-│   ├── obstacle.py      # Definícia a správanie vozidiel
-│   └── paths.py         # Stabilné cesty k súborom projektu
-├── sounds/              # Hudba na pozadí a zvukové efekty
-├── highscores.json      # Uložené najlepšie skóre
-├── settings.json        # Uložené nastavenia hlasitosti
-├── main.py              # Vstupný bod hry
-├── start_menu.py        # Menu a nastavenia
-└── README.md            # Dokumentácia projektu
+│   ├── __init__.py
+│   ├── background.py         # Nekonečné rolovanie pozadia
+│   ├── dino.py               # Logika hráča
+│   ├── game.py               # Singleplayer herná slučka
+│   ├── init.py
+│   ├── multiplayer_game.py   # Multiplayer herná slučka
+│   ├── network_config.py     # Sieťová konfigurácia
+│   ├── obstacle.py           # Vozidlá a prekážky
+│   └── paths.py              # Cesty k assetom
+├── sounds/                   # Hudba a zvukové efekty
+├── .gitignore
+├── client.py                 # Multiplayer klient
+├── highscores.json           # Uložené rekordy
+├── main.py                   # Spustenie hry
+├── README.md                 # Dokumentácia projektu
+├── requirements.txt          # Zoznam použitých knižníc
+├── server.py                 # Multiplayer server
+├── settings.json             # Nastavenia hlasitosti
+└── start_menu.py             # Hlavné menu
 ```
 
 ## Použité zdroje
@@ -94,6 +112,6 @@ Dino_run/
 
 ### Hudba a zvuky
 
-* Pixel Drift - Uppbeat: https://uppbeat.io/track/pecan-pie/pixel-drift
-* Deer Jump Effect - Freesound: https://freesound.org/people/Bastianhallo/sounds/462958/
-* Collision / Crash Effect - Freesound: https://freesound.org/people/squareal/sounds/237375/
+* Pixel Drift – Uppbeat: https://uppbeat.io/track/pecan-pie/pixel-drift
+* Deer Jump Effect – Freesound: https://freesound.org/people/Bastianhallo/sounds/462958/
+* Collision / Crash Effect – Freesound: https://freesound.org/people/squareal/sounds/237375/

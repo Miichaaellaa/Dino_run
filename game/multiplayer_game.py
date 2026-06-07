@@ -19,13 +19,10 @@ class MultiplayerGame:
         self.small_font = pygame.font.SysFont(None, 26)
         self.tiny_font = pygame.font.SysFont(None, 22)
         self.world_aspect = self.WORLD_WIDTH / self.WORLD_HEIGHT
-        available_players = [
-            {"name": "P1", "key": pygame.K_SPACE, "key_label": "SPACE", "dino": Dino(100, 300), "alive": True},
-            {"name": "P2", "key": pygame.K_w, "key_label": "W", "dino": Dino(100, 300), "alive": True},
-            {"name": "P3", "key": pygame.K_UP, "key_label": "UP", "dino": Dino(100, 300), "alive": True},
-            {"name": "P4", "key": pygame.K_RETURN, "key_label": "ENTER", "dino": Dino(100, 300), "alive": True},
-        ]
-        self.players = available_players[:self.player_count]
+
+        # Dynamické vytvorenie hráčov bez zbytočných kľúčov
+        self.players = [{"name": f"P{i + 1}", "dino": Dino(100, 300), "alive": True} for i in range(self.player_count)]
+
         self.obstacles = []
         self.bg = Background(self.WORLD_WIDTH, self.WORLD_HEIGHT, 5)
         self.world_surface = pygame.Surface((self.WORLD_WIDTH, self.WORLD_HEIGHT))
@@ -101,7 +98,8 @@ class MultiplayerGame:
                     return
                 if self.game_over or getattr(self, "waiting_for_restart", False):
                     continue
-                if event.key in [pygame.K_SPACE, pygame.K_UP, pygame.K_w, pygame.K_RETURN]:
+                # IBA SPACE PRE VŠETKÝCH
+                if event.key == pygame.K_SPACE:
                     player = self.players[local_id]
                     if player["alive"] and not player["dino"].jumping:
                         player["dino"].jump()
@@ -126,7 +124,6 @@ class MultiplayerGame:
 
     def update(self):
         local_id = self.network.player_id if hasattr(self, "network") else 0
-
         if hasattr(self, "network") and self.network:
             local_dino = self.players[local_id]["dino"]
             local_data = {
@@ -141,21 +138,17 @@ class MultiplayerGame:
                 local_data["obstacles"] = [{"x": obs.x, "type": obs.type} for obs in self.obstacles]
 
             response = self.network.send({"type": "update", "data": local_data})
-
             if response:
                 if response.get("abort_game"):
                     self.return_to_menu = True
                     return
-
                 server_game_started = response.get("game_started", True)
                 self.server_countdown = response.get("countdown", 10)
                 if response.get("global_game_over"):
                     self.game_over = True
                     self.winner_index = response.get("global_winner")
-
                 if server_game_started and getattr(self, "waiting_for_restart", False):
                     self.waiting_for_restart = False
-
                 if "players" in response and server_game_started and not self.game_over:
                     p0_info = response["players"].get(0) or response["players"].get("0")
                     if local_id != 0 and p0_info:
@@ -206,8 +199,6 @@ class MultiplayerGame:
 
         if self.players[local_id]["alive"]:
             self.players[local_id]["dino"].update()
-
-        if self.players[local_id]["alive"]:
             for obstacle in self.obstacles:
                 if self.players[local_id]["dino"].rect.colliderect(obstacle.rect):
                     self.players[local_id]["alive"] = False
@@ -231,9 +222,7 @@ class MultiplayerGame:
 
     def draw_player_overlay(self, target_rect, player_index):
         player = self.players[player_index]
-        label = self.tiny_font.render(
-            f"{player['name']}  skok: {player['key_label']}", True, (255, 255, 255)
-        )
+        label = self.tiny_font.render(f"{player['name']}", True, (255, 255, 255))
         self.screen.blit(label, (target_rect.x + 10, target_rect.y + 8))
         score_text = self.tiny_font.render(f"Score: {self.score // 10}", True, (255, 255, 255))
         level_text = self.tiny_font.render(f"Level: {self.level}", True, (255, 255, 255))
@@ -246,13 +235,8 @@ class MultiplayerGame:
             overlay.fill((0, 0, 0, 155))
             self.screen.blit(overlay, target_rect.topleft)
             eliminated = self.small_font.render("Vypadol", True, (255, 70, 70))
-            self.screen.blit(
-                eliminated,
-                (
-                    target_rect.centerx - eliminated.get_width() // 2,
-                    target_rect.centery - eliminated.get_height() // 2,
-                ),
-            )
+            self.screen.blit(eliminated, (target_rect.centerx - eliminated.get_width() // 2,
+                                          target_rect.centery - eliminated.get_height() // 2))
 
     def draw_game_over(self):
         overlay = pygame.Surface((self.WIDTH, self.HEIGHT), pygame.SRCALPHA)
@@ -308,21 +292,17 @@ class MultiplayerGame:
                 pygame.Rect(self.WIDTH // 2, 0, self.WIDTH // 2, self.HEIGHT // 2),
                 pygame.Rect(0, self.HEIGHT // 2, self.WIDTH // 2, self.HEIGHT // 2),
             ]
-        view_positions = [
+        return [
             pygame.Rect(0, 0, self.WIDTH // 2, self.HEIGHT // 2),
             pygame.Rect(self.WIDTH // 2, 0, self.WIDTH // 2, self.HEIGHT // 2),
             pygame.Rect(0, self.HEIGHT // 2, self.WIDTH // 2, self.HEIGHT // 2),
             pygame.Rect(self.WIDTH // 2, self.HEIGHT // 2, self.WIDTH // 2, self.HEIGHT // 2),
         ]
-        return view_positions
 
     def draw_split_lines(self):
         if self.player_count == 2:
             pygame.draw.line(self.screen, (245, 245, 245), (self.WIDTH // 2, 0), (self.WIDTH // 2, self.HEIGHT), 2)
-        elif self.player_count == 3:
-            pygame.draw.line(self.screen, (245, 245, 245), (self.WIDTH // 2, 0), (self.WIDTH // 2, self.HEIGHT), 2)
-            pygame.draw.line(self.screen, (245, 245, 245), (0, self.HEIGHT // 2), (self.WIDTH, self.HEIGHT // 2), 2)
-        else:
+        elif self.player_count >= 3:
             pygame.draw.line(self.screen, (245, 245, 245), (self.WIDTH // 2, 0), (self.WIDTH // 2, self.HEIGHT), 2)
             pygame.draw.line(self.screen, (245, 245, 245), (0, self.HEIGHT // 2), (self.WIDTH, self.HEIGHT // 2), 2)
 
