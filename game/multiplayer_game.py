@@ -149,6 +149,9 @@ class MultiplayerGame:
 
                 server_game_started = response.get("game_started", True)
                 self.server_countdown = response.get("countdown", 10)
+                if response.get("global_game_over"):
+                    self.game_over = True
+                    self.winner_index = response.get("global_winner")
 
                 if server_game_started and getattr(self, "waiting_for_restart", False):
                     self.waiting_for_restart = False

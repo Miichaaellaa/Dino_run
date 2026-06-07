@@ -5,6 +5,8 @@ import sys
 
 from game.game import Game
 from game.background import Background
+from game.paths import project_path
+from game.network_config import PORT
 
 
 class Slider:
@@ -326,6 +328,7 @@ class Menu:
         from client import Network
         n = Network(ip)
         if n.player_id is None:
+            n.close()
             self.show_error("Nepodarilo sa pripojiť k serveru!")
             return
         lobby_running = True
@@ -336,11 +339,13 @@ class Menu:
                     pygame.quit()
                     sys.exit()
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    n.close()
                     lobby_running = False
                     self.menu_state = 'main'
                     return
             response = n.send({"type": "lobby_join", "name": self.player_name, "character": self.selected_character})
             if not response:
+                n.close()
                 self.show_error("Spojenie so serverom prerušené!")
                 return
             self.screen.fill((30, 30, 30))
@@ -378,6 +383,7 @@ class Menu:
                 game.run_multiplayer(n, self.player_name)
             else:
                 game.run()
+        n.close()
         try:
             pygame.mixer.music.play(-1)
         except:
@@ -386,7 +392,10 @@ class Menu:
 
     def demo_create_server(self):
         try:
-            subprocess.Popen([sys.executable, "server.py", str(self.max_players_choice)])
+            subprocess.Popen(
+                [sys.executable, str(project_path("server.py")), str(self.max_players_choice)],
+                cwd=str(project_path()),
+            )
             self.start_multiplayer("127.0.0.1")
         except Exception as e:
             self.show_error("Nepodarilo sa spustiť server")
@@ -470,6 +479,8 @@ class Menu:
         local_ip = self.get_local_ip()
         ip_text = self.small_font.render(f"Vaša IP adresa: {local_ip}", True, (100, 255, 100))
         self.screen.blit(ip_text, (self.WIDTH // 2 - ip_text.get_width() // 2, 80))
+        port_text = self.small_font.render(f"Port: {PORT}", True, (200, 200, 200))
+        self.screen.blit(port_text, (self.WIDTH // 2 - port_text.get_width() // 2, 108))
 
         self.screen.blit(self.small_font.render("Počet hráčov (max 4):", True, (255, 255, 255)), (180, 150))
         for i, num in enumerate([2, 3, 4]):
