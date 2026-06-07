@@ -12,7 +12,7 @@ class Network:
     def connect(self):
         try:
             self.client.connect(self.addr)
-            return pickle.loads(self.client.recv(2048))
+            return pickle.loads(self.client.recv(16384))
         except socket.error as e:
             print(e)
             return None
@@ -20,7 +20,7 @@ class Network:
     def send(self, data):
         try:
             self.client.send(pickle.dumps(data))
-            return pickle.loads(self.client.recv(2048))
+            return pickle.loads(self.client.recv(16384))
         except socket.error as e:
             print(e)
             return None

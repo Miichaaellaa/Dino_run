@@ -6,6 +6,7 @@ from .dino import Dino
 from .obstacle import Obstacle
 from .paths import project_path
 
+
 class MultiplayerGame:
     def __init__(self, screen, player_count=4, music_volume=0.5, sfx_volume=0.4):
         self.screen = screen
@@ -42,6 +43,8 @@ class MultiplayerGame:
         self.sfx_volume = sfx_volume
         self.jump_sound = None
         self.crash_sound = None
+        self.waiting_for_restart = False
+        self.server_countdown = 10
         self.load_sounds()
         self.play_music()
 
@@ -54,8 +57,7 @@ class MultiplayerGame:
             self.jump_sound.set_volume(self.sfx_volume)
             self.crash_sound = pygame.mixer.Sound(project_path("sounds", "effects", "crash.wav"))
             self.crash_sound.set_volume(self.sfx_volume)
-        except pygame.error as e:
-            print(f"Chyba pri nacitani multiplayer zvukov: {e}")
+        except pygame.error:
             self.jump_sound = None
             self.crash_sound = None
 
@@ -66,8 +68,8 @@ class MultiplayerGame:
             pygame.mixer.music.load(project_path("sounds", "music", "background_music.mp3"))
             pygame.mixer.music.set_volume(self.music_volume)
             pygame.mixer.music.play(-1)
-        except pygame.error as e:
-            print(f"Chyba pri nacitani multiplayer hudby: {e}")
+        except pygame.error:
+            pass
 
     def play_sfx(self, sound):
         if not sound or self.sfx_volume <= 0:
@@ -78,8 +80,8 @@ class MultiplayerGame:
                 channel.play(sound)
             else:
                 sound.play()
-        except pygame.error as e:
-            print(f"Chyba pri prehravani SFX: {e}")
+        except pygame.error:
+            pass
 
     def handle_events(self):
         local_id = self.network.player_id if hasattr(self, "network") else 0
@@ -89,15 +91,15 @@ class MultiplayerGame:
                 return
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    if self.game_over:
-                        self.return_to_menu = True
-                    else:
-                        self.running = False
+                    self.return_to_menu = True
                     return
-                if event.key == pygame.K_r and self.game_over:
-                    self.restart_game()
+                if event.key == pygame.K_r and self.game_over and not getattr(self, "waiting_for_restart", False):
+                    if hasattr(self, "network") and self.network:
+                        self.network.send({"type": "restart"})
+                        self.waiting_for_restart = True
+                        self.restart_game()
                     return
-                if self.game_over:
+                if self.game_over or getattr(self, "waiting_for_restart", False):
                     continue
                 if event.key in [pygame.K_SPACE, pygame.K_UP, pygame.K_w, pygame.K_RETURN]:
                     player = self.players[local_id]
@@ -123,9 +125,63 @@ class MultiplayerGame:
         return obstacle_type
 
     def update(self):
-        if self.game_over:
-            return
         local_id = self.network.player_id if hasattr(self, "network") else 0
+
+        if hasattr(self, "network") and self.network:
+            local_dino = self.players[local_id]["dino"]
+            local_data = {
+                "y": local_dino.rect.y,
+                "is_jumping": local_dino.jumping,
+                "alive": self.players[local_id]["alive"]
+            }
+            if local_id == 0 and not self.game_over and not getattr(self, "waiting_for_restart", False):
+                local_data["score"] = self.score
+                local_data["level"] = self.level
+                local_data["game_speed"] = self.game_speed
+                local_data["obstacles"] = [{"x": obs.x, "type": obs.type} for obs in self.obstacles]
+
+            response = self.network.send({"type": "update", "data": local_data})
+
+            if response:
+                if response.get("abort_game"):
+                    self.return_to_menu = True
+                    return
+
+                server_game_started = response.get("game_started", True)
+                self.server_countdown = response.get("countdown", 10)
+
+                if server_game_started and getattr(self, "waiting_for_restart", False):
+                    self.waiting_for_restart = False
+
+                if "players" in response and server_game_started and not self.game_over:
+                    p0_info = response["players"].get(0) or response["players"].get("0")
+                    if local_id != 0 and p0_info:
+                        self.score = p0_info.get("score", self.score)
+                        self.level = p0_info.get("level", self.level)
+                        self.game_speed = p0_info.get("game_speed", self.game_speed)
+                        remote_obstacles = p0_info.get("obstacles", [])
+                        if len(self.obstacles) != len(remote_obstacles):
+                            self.obstacles = []
+                            for obs in remote_obstacles:
+                                self.obstacles.append(Obstacle(obs["x"], obs["type"], self.game_speed))
+                        else:
+                            for i, obs in enumerate(remote_obstacles):
+                                self.obstacles[i].x = obs["x"]
+                                if hasattr(self.obstacles[i], "rect"):
+                                    self.obstacles[i].rect.x = obs["x"]
+                    for p_id_key, p_info in response["players"].items():
+                        p_id = int(p_id_key)
+                        if p_id != local_id and p_id < len(self.players):
+                            remote_dino = self.players[p_id]["dino"]
+                            remote_dino.rect.y = p_info.get("y", 300)
+                            if hasattr(remote_dino, "y"):
+                                remote_dino.y = p_info.get("y", 300)
+                            remote_dino.jumping = p_info.get("is_jumping", False)
+                            self.players[p_id]["alive"] = p_info.get("alive", True)
+
+        if self.game_over or getattr(self, "waiting_for_restart", False):
+            return
+
         if local_id == 0:
             self.score += 1
             self.level = self.score // 600 + 1
@@ -144,52 +200,17 @@ class MultiplayerGame:
         else:
             self.bg.speed = self.game_speed
             self.bg.update()
+
         if self.players[local_id]["alive"]:
             self.players[local_id]["dino"].update()
+
         if self.players[local_id]["alive"]:
             for obstacle in self.obstacles:
                 if self.players[local_id]["dino"].rect.colliderect(obstacle.rect):
                     self.players[local_id]["alive"] = False
                     self.play_sfx(self.crash_sound)
                     break
-        if hasattr(self, "network") and self.network:
-            local_dino = self.players[local_id]["dino"]
-            local_data = {
-                "y": local_dino.rect.y,
-                "is_jumping": local_dino.jumping,
-                "alive": self.players[local_id]["alive"]
-            }
-            if local_id == 0:
-                local_data["score"] = self.score
-                local_data["level"] = self.level
-                local_data["game_speed"] = self.game_speed
-                local_data["obstacles"] = [{"x": obs.x, "type": obs.type} for obs in self.obstacles]
-            response = self.network.send({"type": "update", "data": local_data})
-            if response and "players" in response:
-                p0_info = response["players"].get(0) or response["players"].get("0")
-                if local_id != 0 and p0_info:
-                    self.score = p0_info.get("score", self.score)
-                    self.level = p0_info.get("level", self.level)
-                    self.game_speed = p0_info.get("game_speed", self.game_speed)
-                    remote_obstacles = p0_info.get("obstacles", [])
-                    if len(self.obstacles) != len(remote_obstacles):
-                        self.obstacles = []
-                        for obs in remote_obstacles:
-                            self.obstacles.append(Obstacle(obs["x"], obs["type"], self.game_speed))
-                    else:
-                        for i, obs in enumerate(remote_obstacles):
-                            self.obstacles[i].x = obs["x"]
-                            if hasattr(self.obstacles[i], "rect"):
-                                self.obstacles[i].rect.x = obs["x"]
-                for p_id_key, p_info in response["players"].items():
-                    p_id = int(p_id_key)
-                    if p_id != local_id and p_id < len(self.players):
-                        remote_dino = self.players[p_id]["dino"]
-                        remote_dino.rect.y = p_info.get("y", 300)
-                        if hasattr(remote_dino, "y"):
-                            remote_dino.y = p_info.get("y", 300)
-                        remote_dino.jumping = p_info.get("is_jumping", False)
-                        self.players[p_id]["alive"] = p_info.get("alive", True)
+
         alive_players = [index for index, player in enumerate(self.players) if player["alive"]]
         if len(alive_players) <= 1:
             self.game_over = True
@@ -234,14 +255,19 @@ class MultiplayerGame:
         overlay = pygame.Surface((self.WIDTH, self.HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 175))
         self.screen.blit(overlay, (0, 0))
-        if self.winner_index is None:
-            title = "REMIZA"
+        if getattr(self, "waiting_for_restart", False):
+            title = f"Cakame na hracov... {self.server_countdown}"
+            title_text = self.font.render(title, True, (255, 230, 80))
+            self.screen.blit(title_text, (self.WIDTH // 2 - title_text.get_width() // 2, self.HEIGHT // 2 - 20))
         else:
-            title = f"VYHRAL {self.players[self.winner_index]['name']}"
-        title_text = self.font.render(title, True, (255, 230, 80))
-        restart_text = self.small_font.render("R - restart    ESC - menu", True, (230, 230, 230))
-        self.screen.blit(title_text, (self.WIDTH // 2 - title_text.get_width() // 2, self.HEIGHT // 2 - 40))
-        self.screen.blit(restart_text, (self.WIDTH // 2 - restart_text.get_width() // 2, self.HEIGHT // 2 + 10))
+            if self.winner_index is None:
+                title = "REMIZA"
+            else:
+                title = f"VYHRAL {self.players[self.winner_index]['name']}"
+            title_text = self.font.render(title, True, (255, 230, 80))
+            restart_text = self.small_font.render("R - som pripraveny    ESC - menu", True, (230, 230, 230))
+            self.screen.blit(title_text, (self.WIDTH // 2 - title_text.get_width() // 2, self.HEIGHT // 2 - 40))
+            self.screen.blit(restart_text, (self.WIDTH // 2 - restart_text.get_width() // 2, self.HEIGHT // 2 + 10))
 
     def draw(self):
         view_positions = self.get_view_positions()
@@ -253,7 +279,7 @@ class MultiplayerGame:
             self.screen.blit(scaled_view, target_rect.topleft)
             self.draw_player_overlay(target_rect, index)
         self.draw_split_lines()
-        if self.game_over:
+        if self.game_over or getattr(self, "waiting_for_restart", False):
             self.draw_game_over()
         pygame.display.flip()
 
