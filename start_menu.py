@@ -323,13 +323,61 @@ class Menu:
             pygame.mixer.music.stop()
         except:
             pass
-
-        game = Game(self.screen, music_volume=self.music_volume, sfx_volume=self.sfx_volume, character=self.selected_character)
-        if hasattr(game, "run_multiplayer"):
-            game.run_multiplayer(ip, self.player_name)
-        else:
+        from client import Network
+        n = Network(ip)
+        if n.player_id is None:
+            self.show_error("Nepodarilo sa pripojiť k serveru!")
+            return
+        lobby_running = True
+        lobby_clock = pygame.time.Clock()
+        while lobby_running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    lobby_running = False
+                    self.menu_state = 'main'
+                    return
+            response = n.send({"type": "lobby_join", "name": self.player_name, "character": self.selected_character})
+            if not response:
+                self.show_error("Spojenie so serverom prerušené!")
+                return
+            self.screen.fill((30, 30, 30))
+            title_text = self.font.render("Lobby Čakáreň", True, (255, 255, 255))
+            self.screen.blit(title_text, (self.WIDTH // 2 - title_text.get_width() // 2, 40))
+            count_text = self.small_font.render(f"Hráči: {response['total_connected']} / {response['max_players']}", True, (200, 200, 200))
+            self.screen.blit(count_text, (self.WIDTH // 2 - count_text.get_width() // 2, 100))
+            y_pos = 150
+            for p_id, p_info in response["players"].items():
+                p_str = f"Hráč {p_id}: {p_info['name']} ({p_info['character'].upper()})"
+                p_color = (100, 255, 100) if p_id == n.player_id else (255, 255, 255)
+                p_surf = self.small_font.render(p_str, True, p_color)
+                self.screen.blit(p_surf, (self.WIDTH // 2 - p_surf.get_width() // 2, y_pos))
+                y_pos += 30
+            if response["game_started"]:
+                lobby_running = False
+                break
+            if response.get("countdown", 10) <= 10 and response["total_connected"] == response["max_players"]:
+                cd_str = f"Hra začína o: {response['countdown']}s"
+                cd_surf = self.font.render(cd_str, True, (255, 215, 0))
+                self.screen.blit(cd_surf, (self.WIDTH // 2 - cd_surf.get_width() // 2, 300))
+            else:
+                wait_surf = self.small_font.render("Čaká sa na naplnenie serveru...", True, (150, 150, 150))
+                self.screen.blit(wait_surf, (self.WIDTH // 2 - wait_surf.get_width() // 2, 300))
+            pygame.display.flip()
+            lobby_clock.tick(30)
+        try:
+            from game.multiplayer_game import MultiplayerGame
+            game = MultiplayerGame(self.screen, response["max_players"], music_volume=self.music_volume, sfx_volume=self.sfx_volume)
+            game.network = n
             game.run()
-
+        except ImportError:
+            game = Game(self.screen, music_volume=self.music_volume, sfx_volume=self.sfx_volume, character=self.selected_character)
+            if hasattr(game, "run_multiplayer"):
+                game.run_multiplayer(n, self.player_name)
+            else:
+                game.run()
         try:
             pygame.mixer.music.play(-1)
         except:
@@ -343,8 +391,6 @@ class Menu:
         except Exception as e:
             self.show_error("Nepodarilo sa spustiť server")
 
-        local_ip = self.get_local_ip()
-        self.show_error(f"Server vytvorený na IP: {local_ip}:{55555}")
 
     def get_local_ip(self):
         """Získa lokálnu IP adresu"""
