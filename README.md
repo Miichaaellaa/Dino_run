@@ -9,7 +9,7 @@
 ## Ukážka hry (Multiplayer)
 
 ![Ukážka hry](assets/images/ukazka2.png)
-
+![Ukážka hry(tabulka)](assets/images/tabulka.png)
 ## Pointa hry
 
 Cieľom hry je prežiť čo najdlhšie v premávke a získať čo najvyššie skóre.
@@ -52,7 +52,6 @@ Cieľom hry je prežiť čo najdlhšie v premávke a získať čo najvyššie sk
 | **R**                    | Reštart hry                                    |
 | **ESC v hre**            | Ukončenie hry alebo návrat do menu             |
 | **ESC v menu**           | Návrat o úroveň späť alebo ukončenie aplikácie |
-| **+ / - v nastaveniach** | Úprava hlasitosti hudby a efektov              |
 
 ## Spustenie
 

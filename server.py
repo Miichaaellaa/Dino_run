@@ -7,11 +7,10 @@ import time
 
 from game.network_config import PORT
 
-
 try:
     MAX_PLAYERS = max(2, min(4, int(sys.argv[1])))
 except (IndexError, ValueError):
-    MAX_PLAYERS = 2
+    MAX_PLAYERS = 4
 
 HOST = ""
 
@@ -36,6 +35,8 @@ countdown_active = False
 global_game_over = False
 global_winner = None
 abort_game = False
+round_id = 0
+last_alive_player = None
 state_lock = threading.Lock()
 
 
@@ -66,11 +67,13 @@ def recv_packet(conn):
 
 
 def default_player_data(player_id, data):
+    name = str(data.get("name") or f"Hrac {player_id + 1}").strip() or f"Hrac {player_id + 1}"
+    character = str(data.get("character") or "deer").strip() or "deer"
     return {
-        "name": data.get("name", f"Hrac {player_id + 1}"),
-        "character": data.get("character", "deer"),
+        "name": name,
+        "character": character,
         "x": 100,
-        "y": 300,
+        "y": 270,
         "is_jumping": False,
         "score": 0,
         "level": 1,
@@ -110,12 +113,14 @@ def build_response():
         "global_game_over": global_game_over,
         "global_winner": global_winner,
         "abort_game": abort_game,
+        "round_id": round_id,
     }
 
 
 def threaded_client(conn, player_id):
     global connections, countdown_active, game_started
     global global_game_over, global_winner, countdown, abort_game
+    global round_id, last_alive_player
 
     try:
         send_packet(conn, player_id)
@@ -139,32 +144,43 @@ def threaded_client(conn, player_id):
                     players_data[player_id] = default_player_data(player_id, data)
 
                 elif message_type == "update" and player_id in players_data:
-                    players_data[player_id].update(data.get("data", {}))
+                    client_round = data.get("round_id", round_id)
+                    if client_round == round_id:
+                        players_data[player_id].update(data.get("data", {}))
 
+                # INSTANTNÝ REŠTART PRE VŠETKÝCH BEZ ČAKANIA
                 elif message_type == "restart" and player_id in players_data:
-                    players_data[player_id]["wants_restart"] = True
-                    all_ready = all(player.get("wants_restart", False) for player in players_data.values())
+                    global_game_over = False
+                    global_winner = None
+                    last_alive_player = None
+                    round_id += 1
+                    game_started = True
+                    countdown_active = False
+                    countdown = 0
 
-                    if all_ready and players_data:
-                        global_game_over = False
-                        global_winner = None
-                        game_started = False
-                        countdown_active = True
-                        countdown = 10
-
-                        for player in players_data.values():
-                            player["alive"] = True
-                            player["y"] = 300
-                            player["is_jumping"] = False
-                            player["wants_restart"] = False
+                    for p in players_data.values():
+                        p["alive"] = True
+                        p["y"] = 270
+                        p["is_jumping"] = False
+                        p["wants_restart"] = False
+                        p["score"] = 0
+                        p["level"] = 1
+                        p["game_speed"] = 5
+                        p["obstacles"] = []
 
                 if len(players_data) == MAX_PLAYERS and not game_started and not global_game_over:
                     countdown_active = True
 
                 alive_players = [p_id for p_id, player in players_data.items() if player.get("alive", True)]
-                if game_started and len(alive_players) <= 1:
+                if game_started and not global_game_over:
+                    if len(alive_players) == 1:
+                        last_alive_player = alive_players[0]
+                    elif len(alive_players) > 1:
+                        last_alive_player = None
+
+                if game_started and not global_game_over and len(alive_players) == 0 and players_data:
                     global_game_over = True
-                    global_winner = alive_players[0] if len(alive_players) == 1 else None
+                    global_winner = last_alive_player
 
                 response = build_response()
 
@@ -188,6 +204,8 @@ def threaded_client(conn, player_id):
             global_game_over = False
             global_winner = None
             abort_game = False
+            last_alive_player = None
+            round_id = 0
 
     conn.close()
 

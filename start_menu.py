@@ -374,7 +374,16 @@ class Menu:
             lobby_clock.tick(30)
         try:
             from game.multiplayer_game import MultiplayerGame
-            game = MultiplayerGame(self.screen, response["max_players"], music_volume=self.music_volume, sfx_volume=self.sfx_volume)
+            game = MultiplayerGame(
+                self.screen,
+                response["max_players"],
+                music_volume=self.music_volume,
+                sfx_volume=self.sfx_volume,
+                player_name=self.player_name,
+                character=self.selected_character,
+                local_player_id=n.player_id,
+                initial_players=response.get("players"),
+            )
             game.network = n
             game.run()
         except ImportError:
